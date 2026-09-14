@@ -8,19 +8,27 @@
 
 #pragma once
 
+inline double clamp(double value, double min, double max)
+{
+    return value < min ? min : (value > max ? max : value);
+}
+
 // H9 - 9 dof: thumb (3) + index/middle/ring (2 each). Side-agnostic.
 // Writes 9 floats to `q`.
 inline void RetargetSide_h9(const float _q[20], float* q)
 {
-    q[0] = 1.7f * _q[0]  + 0.85f;
-    q[1] = 1.2f * _q[2]  + 0.48f;
-    q[2] = 1.2f * _q[3]  + 0.48f;
-    q[3] = 1.2f * _q[5]  + 0.0f;
-    q[4] = 1.5f * _q[6]  + 0.0f;
-    q[5] = 1.2f * _q[9]  + 0.0f;
-    q[6] = 1.5f * _q[10] + 0.0f;
-    q[7] = 1.2f * _q[13] + 0.0f;
-    q[8] = 1.5f * _q[14] + 0.0f;
+    q[0] = 1.7f * _q[0]  + 0.85f; q[0] = clamp(q[0], 0, 1.57);
+    q[1] = 1.2f * _q[2]  + 0.48f; q[1] = clamp(q[1], 0, 1.57);
+    q[2] = 1.2f * _q[3]  + 0.48f; q[2] = clamp(q[2], 0, 1.57);
+    
+    q[3] = 1.2f * _q[5]  + 0.0f;  q[3] = clamp(q[3], 0, 1.57);
+    q[4] = 1.5f * _q[6]  + 0.0f;  q[4] = clamp(q[4], 0, 1.57);
+
+    q[5] = 1.2f * _q[9]  + 0.0f;  q[5] = clamp(q[5], 0, 1.57);
+    q[6] = 1.5f * _q[10] + 0.0f;  q[6] = clamp(q[6], 0, 1.57);
+
+    q[7] = 1.2f * _q[13] + 0.0f;  q[7] = clamp(q[7], 0, 1.57);
+    q[8] = 1.5f * _q[14] + 0.0f;  q[8] = clamp(q[8], 0, 1.57);
 }
 
 // DG5F - 20 dof, side-dependent ('L' or 'R'). Writes 20 floats to `q`.
@@ -134,4 +142,24 @@ inline void RetargetSide_dg5s(char side, const float _q[20], float* q)
         q[18] =  1.4f * _q[18] + 0.1f;
         q[19] =  1.2f * _q[19] - 0.1f;
     }
+}
+
+inline void RetargetSide_h12(const float _q[20], float* q)
+{
+    q[0] = 1.0f * _q[0]  + 0.0;  q[0] = clamp(q[0], 0, 0.4);
+    q[1] = -1.0f * _q[1]  + 1.7; q[1] = clamp(q[1], 0.5, 1.57);
+    q[2] = 1.0f * _q[2]  + 0.0f; q[2] = clamp(q[2], 0, 1.57);
+    q[3] = 1.0f * _q[3]  + 0.0f; q[3] = clamp(q[3], 0, 1.57);
+
+    q[4] = 1.0f * _q[5]  + 0.0f; q[4] = clamp(q[4], 0, 1.57);
+    q[5] = 1.0f * _q[6]  + 0.0f; q[5] = clamp(q[5], 0, 1.57);
+
+    q[6] = 1.0f * _q[9] + 0.0f;  q[6] = clamp(q[6], 0, 1.57);
+    q[7] = 1.0f * _q[10] + 0.0f; q[7] = clamp(q[7], 0, 1.57);
+
+    q[8] = 1.0f * _q[13] + 0.0f; q[8] = clamp(q[8], 0, 1.57);
+    q[9] = 1.0f * _q[14] + 0.0f; q[9] = clamp(q[9], 0, 1.57);
+
+    q[10] = 1.0f * _q[17] + 0.0f; q[10] = clamp(q[10], 0, 1.57);
+    q[11] = 1.0f * _q[18] + 0.0f; q[11] = clamp(q[11], 0, 1.57);
 }

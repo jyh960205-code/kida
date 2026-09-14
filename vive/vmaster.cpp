@@ -12,7 +12,7 @@
 //
 // CLI:
 //   -tN   operation type: 0=kida-left, 1=kida-right, 2=kida(both), 5=gos10
-//   -gN   gripper type:   0=H9, 1=DG5F-M, 2=DG5F-S
+//   -gN   gripper type:   0=H9, 1=DG5F-M, 2=DG5F-S, 3=H12
 //   -l    also start ./logger
 //   -n    skip Manus glove calibration (use SDK defaults)
 //
@@ -376,6 +376,9 @@ void RetargetAll(int g, float* q)
     } else if (g == 2) {
         if (haveL) RetargetSide_dg5s('L', L, q);
         if (haveR) RetargetSide_dg5s('R', R, q + 20);
+    } else if (g == 3) {
+        if (haveL) RetargetSide_h12(L, q);
+        if (haveR) RetargetSide_h12(R, q + 20);
     }
 }
 
@@ -738,7 +741,7 @@ struct Args {
 
 void PrintUsage(const char* prog)
 {
-    std::fprintf(stderr, "usage: %s -tN [-gN] [-l] [-n]\n  -tN   operation: 0=kida-left  1=kida-right  2=kida(both)  5=gos10\n  -gN   gripper:   0=H9  1=DG5F-M  2=DG5F-S\n  -l    also start ./logger\n  -n    skip Manus glove calibration (use SDK defaults)\n", prog);
+    std::fprintf(stderr, "usage: %s -tN [-gN] [-l] [-n]\n  -tN   operation: 0=kida-left  1=kida-right  2=kida(both)  5=gos10\n  -gN   gripper:   0=H9  1=DG5F-M  2=DG5F-S  3=H12\n  -l    also start ./logger\n  -n    skip Manus glove calibration (use SDK defaults)\n", prog);
 }
 
 bool ParseArgs(int argc, char** argv, Args& a)
@@ -821,6 +824,7 @@ int main(int argc, char** argv)
     int   n_joint = 0;
     if      (arg.g == 0) n_joint = 9;
     else if (arg.g == 1 || arg.g == 2) n_joint = 20;
+    else if (arg.g == 3) n_joint = 12;
     // arg.g == -1: arm-only mode
 
     // 1. Manus thread (replaces UDP receiver)

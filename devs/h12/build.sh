@@ -3,7 +3,7 @@
 gcc -W -Wall -o check check.c -lpthread
 
 
-#gcc -W -Wall -o basic basic.c -lpthread -lm
+gcc -W -Wall -o basic basic.c -lm -I/usr/local/include/dynamixel_sdk -ldxl_x64_c
 
 
 #gcc -W -Wall -shared -o io-can.so -fPIC io-can.c  -include sockcan.h

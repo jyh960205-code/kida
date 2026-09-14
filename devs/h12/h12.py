@@ -54,11 +54,15 @@ class Controller:
             q_d = self.trj1.generate()
             tau = self.pid.update(q_d, q, qd)
             
-        elif self.s == 'test':
-            if self.t == 0: self.trj1.target(np.array([[-1.7, 2.5, 0.0, 0.0,   0.5, 0.5,   0.0, 0.0,   0.0, 0.0,   0.0, 0.0]]), [1000], q, self.T)
-            q_d = self.trj1.generate()
-            tau = self.pid.update(q_d, q, qd)
+        #elif self.s == 'test':
+        #    if self.t == 0: self.trj1.target(np.array([[0.3, 1.0, 0.5, 0.5,   0.0, 0.0,   0.0, 0.0,   0.0, 0.0,   0.0, 0.0]]), [1000], q, self.T)
+        #    q_d = self.trj1.generate()
+        #    tau = self.pid.update(q_d, q, qd)
 
+        elif self.s == 'test':
+            q_d = np.array([0.3, 1.0, 0.5, 0.5,   0.0, 0.0,   0.0, 0.0,   0.0, 0.0,   0.0, 0.0])
+            tau = self.pid.update(q_d, q, qd)
+            
         #elif self.s == 'joint':
         #    if self.t == 0: self.trj1.target(self.v.reshape((1, 12)), [1000], q, self.T)
         #    q_d = self.trj1.generate()
