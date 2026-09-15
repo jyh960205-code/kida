@@ -1,6 +1,7 @@
 #!/bin/bash
 
 gcc -W -Wall -o check check.c -lpthread
+gcc -W -Wall -o push-test push-test.c
 
 
 gcc -W -Wall -o basic basic.c -lm -I/usr/local/include/dynamixel_sdk -ldxl_x64_c

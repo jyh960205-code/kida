@@ -118,10 +118,7 @@ int main(int argc, char* argv[]) {
  	//can_send_u16s(fd, 0x11, duty, 2); 
 	
 	for(i = 0; i < N_DRIVER; i++){
-	    //can_send_u16s(fd, send_id[i], duty+2*i, 2);
 	    can_send_u16s(fd, send_id[i], duty+2*i, 2);
-	    
-	    //can_recv_u32s(fd, &recv_id, dpos+2*i, 2);
 	    can_recv_u32s(fd, &recv_id, dtmp, 2);
 	    
 	    dpos[motor_map[2*i]] = dtmp[0];
