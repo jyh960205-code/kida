@@ -2,35 +2,11 @@
 
 STM32G474VETx 기반, 4지(엄지/검지/중지/약지) 13자유도 로봇손의 모터 제어 펌웨어입니다.
 
-> 이 폴더는 **PC-side 실행 패키지가 아니라 MCU 펌웨어**입니다. 현재는 명령/상태 전환을 ST-Link **Live Watch**로 디버거가 직접 poke하는 방식으로 제어하며, 통신 프로토콜은 아직 붙어있지 않습니다. 상위 시스템에서 제어하려면 §5 통신 방식을 먼저 읽어주세요.
+> 이 폴더는 **PC-side 실행 패키지가 아니라 MCU 펌웨어**입니다. 현재는 명령/상태 전환을 ST-Link **Live Watch**로 디버거가 직접 poke하는 방식으로 제어하며, 통신 프로토콜은 아직 없습니다. 통신 프로토콜 설계는 추후 실사용 방식으로 전환 필요(방식 미정).
 
 ---
 
-## 1. 실행 흐름
-
-```mermaid
-flowchart TD
-    A["HAL_Init / SystemClock_Config"] --> B["MX_GPIO_Init / MX_DMA_Init<br/>MX_ADC1~3_Init / MX_USART2_Init<br/>MX_TIM1,3,4,15_Init"]
-    B --> C["ADC DMA 시작: adc1/2/3_buf"]
-    C --> D["모터드라이버 Sleep 해제<br/>GPIOE 3,4,5 = HIGH"]
-    D --> E["Hand_Sensor_Update / Hand_Motor_Init"]
-    E --> F["PWM 채널 13개 시작<br/>TIM1/TIM3/TIM4/TIM15"]
-    F --> G{{"메인 루프 - 무한 반복"}}
-    G --> H["Hand_Sensor_Update<br/>ADC to 각도/전류"]
-    H --> I["system_state 상태머신<br/>0=자유 1=홈 4=그립시퀀스"]
-    I --> J["Hand_Motor_PID_Compute"]
-    J --> K["Hand_Motor_Drive<br/>GPIO 방향 + PWM 출력"]
-    K --> L["HAL_Delay 10ms"]
-    L --> G
-```
-
-제어 주기는 **10ms**(`HAL_Delay(10)`)입니다.
-
-> **TODO**: 통신 프로토콜 설계 (Live Watch → 실사용 방식으로 전환 필요, 방식 미정)
-
----
-
-## 2. 모터 매핑 & 게인 테이블
+## 1. 모터 매핑 & 게인 테이블
 
 `motors[14]` 배열의 인덱스 1~13을 사용합니다 (`motor_init_data[14]`, `Core/Src/hand_motor.c` 기준).
 
@@ -50,13 +26,13 @@ flowchart TD
 | M12 | 1300 | 80 | 0 | 0 | 4000 | 150 | 1 | 0 | 4095 | 180° | PB11 | TIM1_CH4 |
 | M13 | 0 | 100 | 0 | 0 | **5655**(최고) | 150 | 0 | 50 | 4000 | 180° | PB13 | TIM15_CH1 |
 
-- M9~M12: 다회전 처리(`turn_count`), 전류센서(`raw_current_adc`) 별도 수집 — 코드 상으로는 **M9~M13(5채널, `adc3_buf`)** 까지 수집됩니다. (힘 제어 로직에는 아직 미통합)
+- M9~M12: 다회전 처리(`turn_count`), 전류센서(`raw_current_adc`) 별도 수집 — 코드 상으로는 **M9~M13(5채널, `adc3_buf`)** 까지 수집됩니다.
 - M13: 별도 각도변환식(180°/3600pulse), `pwm_limit` 전 모터 중 최고치.
 - 모터드라이버 Sleep 해제 핀: `GPIOE3/4/5` (부팅 시 `HAL_Delay(50)` 후 HIGH로 설정).
 
 ---
 
-## 3. 제어 모드 (`control_mode`)
+## 2. 제어 모드 (`control_mode`)
 
 | 모드 | 동작 |
 |---|---|
@@ -66,11 +42,11 @@ flowchart TD
 | 3 | 상수힘 제어, PWM 2500 (M9~M12 전용) |
 | 4 | 상수힘 제어, PWM 4000 (M9~M12 전용, 모터 발열 주의 — 짧게만 사용 권장) |
 
-`system_state`(전역): `0`=자유모드(Live Watch 수동 조작 대기), `1`=홈모드(전 관절 초기각 고정), `4`=그립 시퀀스(§ 다음 절). **`2`, `3`, `5`는 아직 이식되지 않았습니다.**
+`system_state`(전역): `0`=자유모드(Live Watch 수동 조작 대기), `1`=홈모드(전 관절 초기각 고정), `4`=그립 시퀀스(§ 다음 절).
 
 ---
 
-## 4. 그립 시퀀스 (`system_state == 4`, `state4_step`)
+## 3. 그립 시퀀스 (`system_state == 4`, `state4_step`)
 
 | 스텝 | 트리거 | 동작 | M13 | M9~M12 |
 |---|---|---|---|---|
@@ -84,22 +60,22 @@ flowchart TD
 
 ---
 
-## 5. 통신 방식
+## 4. 통신 방식
 
 - **현재**: 없음. `system_state`, `bit_2` 등은 ST-Link **Live Watch로 디버거가 직접 poke**하는 방식으로 제어됩니다. `MX_USART2_UART_Init()`은 호출되지만 실제 수신 파싱 로직은 없습니다.
 
 ---
 
-## 6. 빌드 방법
+## 5. 빌드 방법
 
 1. STM32CubeIDE로 이 폴더를 **Import → Existing Projects into Workspace**
-2. `MMH_HAND.ioc`를 STM32CubeMX(또는 CubeIDE 내장 `.ioc` 에디터)로 열면 `Drivers/`(HAL/CMSIS)가 자동 재생성됩니다 — 저장소에는 커밋되어 있지 않습니다(§7)
+2. `MMH_HAND.ioc`를 STM32CubeMX(또는 CubeIDE 내장 `.ioc` 에디터)로 열면 `Drivers/`(HAL/CMSIS)가 자동 재생성됩니다 — 저장소에는 커밋되어 있지 않습니다(§6)
 3. `Project → Build Project` (Debug/Release)
 4. 보드 연결 후 `Run → Debug`로 플래시 + Live Watch에서 `system_state` 값을 바꿔가며 동작 확인
 
 ---
 
-## 7. GitHub 업로드 기준
+## 6. GitHub 업로드 기준
 
 **업로드 대상** (재현에 필수)
 - `Core/Inc/*.h`, `Core/Src/*.c` (커스텀 로직 전체)
