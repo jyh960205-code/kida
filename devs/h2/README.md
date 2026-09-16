@@ -10,21 +10,23 @@ STM32G474VETx 기반, 4지(엄지/검지/중지/약지) 13자유도 로봇손의
 
 ```mermaid
 flowchart TD
-    A[HAL_Init / SystemClock_Config] --> B[MX_GPIO_Init / MX_DMA_Init\nMX_ADC1~3_Init / MX_USART2_Init\nMX_TIM1,3,4,15_Init]
-    B --> C[ADC DMA 시작: adc1/2/3_buf]
-    C --> D[모터드라이버 Sleep 해제\nGPIOE 3,4,5 = HIGH]
-    D --> E[Hand_Sensor_Update\nHand_Motor_Init]
-    E --> F[PWM 채널 13개 시작\nTIM1/TIM3/TIM4/TIM15]
-    F --> G{{메인 루프 while(1)}}
-    G --> H[Hand_Sensor_Update\nADC → 각도/전류]
-    H --> I[system_state 상태머신\n0=자유 1=홈 4=그립시퀀스]
-    I --> J[Hand_Motor_PID_Compute]
-    J --> K[Hand_Motor_Drive\nGPIO 방향 + PWM 출력]
-    K --> L[HAL_Delay 10ms]
+    A["HAL_Init / SystemClock_Config"] --> B["MX_GPIO_Init / MX_DMA_Init<br/>MX_ADC1~3_Init / MX_USART2_Init<br/>MX_TIM1,3,4,15_Init"]
+    B --> C["ADC DMA 시작: adc1/2/3_buf"]
+    C --> D["모터드라이버 Sleep 해제<br/>GPIOE 3,4,5 = HIGH"]
+    D --> E["Hand_Sensor_Update / Hand_Motor_Init"]
+    E --> F["PWM 채널 13개 시작<br/>TIM1/TIM3/TIM4/TIM15"]
+    F --> G{{"메인 루프 - 무한 반복"}}
+    G --> H["Hand_Sensor_Update<br/>ADC to 각도/전류"]
+    H --> I["system_state 상태머신<br/>0=자유 1=홈 4=그립시퀀스"]
+    I --> J["Hand_Motor_PID_Compute"]
+    J --> K["Hand_Motor_Drive<br/>GPIO 방향 + PWM 출력"]
+    K --> L["HAL_Delay 10ms"]
     L --> G
 ```
 
 제어 주기는 **10ms**(`HAL_Delay(10)`)입니다.
+
+> **TODO**: 통신 프로토콜 설계 (Live Watch → 실사용 방식으로 전환 필요, 방식 미정)
 
 ---
 
@@ -48,7 +50,7 @@ flowchart TD
 | M12 | 1300 | 80 | 0 | 0 | 4000 | 150 | 1 | 0 | 4095 | 180° | PB11 | TIM1_CH4 |
 | M13 | 0 | 100 | 0 | 0 | **5655**(최고) | 150 | 0 | 50 | 4000 | 180° | PB13 | TIM15_CH1 |
 
-- M9~M12: 다회전 처리(`turn_count`), 전류센서(`raw_current_adc`) 별도 수집 — 코드 상으로는 **M9~M13(5채널, `adc3_buf`)** 까지 수집됩니다. (§8 참고 — 힘 제어 통합 미완료)
+- M9~M12: 다회전 처리(`turn_count`), 전류센서(`raw_current_adc`) 별도 수집 — 코드 상으로는 **M9~M13(5채널, `adc3_buf`)** 까지 수집됩니다. (힘 제어 로직에는 아직 미통합)
 - M13: 별도 각도변환식(180°/3600pulse), `pwm_limit` 전 모터 중 최고치.
 - 모터드라이버 Sleep 해제 핀: `GPIOE3/4/5` (부팅 시 `HAL_Delay(50)` 후 HIGH로 설정).
 
@@ -64,7 +66,7 @@ flowchart TD
 | 3 | 상수힘 제어, PWM 2500 (M9~M12 전용) |
 | 4 | 상수힘 제어, PWM 4000 (M9~M12 전용, 모터 발열 주의 — 짧게만 사용 권장) |
 
-`system_state`(전역): `0`=자유모드(Live Watch 수동 조작 대기), `1`=홈모드(전 관절 초기각 고정), `4`=그립 시퀀스(§ 다음 절). **`2`, `3`, `5`는 아직 이식되지 않았습니다** — §8 참고.
+`system_state`(전역): `0`=자유모드(Live Watch 수동 조작 대기), `1`=홈모드(전 관절 초기각 고정), `4`=그립 시퀀스(§ 다음 절). **`2`, `3`, `5`는 아직 이식되지 않았습니다.**
 
 ---
 
@@ -111,13 +113,3 @@ flowchart TD
 | `Drivers/` (`STM32G4xx_HAL_Driver`, `CMSIS`) | ST 표준 SDK. `.ioc` 기반으로 CubeMX가 자동 재생성 |
 | `Debug/`, `Release/` | 빌드 산출물(`.elf`, `.map`, `.list` 등). 배포용 바이너리가 필요하면 `.elf`/`.bin`만 별도 릴리즈로 |
 | `.settings/`, `.cproject`, `.project`, `.mxproject` | IDE 개인 워크스페이스 로컬 메타데이터 |
-
----
-
-## 8. 알려진 제약 사항 / TODO
-
-- [ ] `system_state == 2, 3, 5`가 아직 이식되지 않음 — `main.c`에 해당 분기가 없어 현재는 `0`(자유) / `1`(홈) / `4`(그립 시퀀스)만 동작함
-- [ ] 통신 프로토콜 설계 (Live Watch → 실사용 방식으로 전환 필요, 방식 미정)
-- [ ] `control_mode` 3번의 명칭 재검토 여부
-- [ ] 힘 제어(force control) 로직에 `raw_current_adc` 통합 설계 — 현재는 `hand_sensor.c`에서 수집만 하고 `hand_motor.c` 로직에는 미사용
-- [ ] `.gitignore` 작성 및 적용
